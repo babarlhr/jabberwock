@@ -516,6 +516,38 @@ describe('core', () => {
                 });
                 describe('commonAncestor', () => {
                     it('should return the common ancestor', async () => {
+                        expect(a.commonAncestor(a)).to.equal(root, 'a commonAncestor a');
+                        expect(a.commonAncestor(b)).to.equal(root, 'a commonAncestor b');
+                        expect(b.commonAncestor(a)).to.equal(root, 'b commonAncestor a');
+                        expect(d.commonAncestor(e)).to.equal(p, 'd commonAncestor e');
+                        expect(f.commonAncestor(e)).to.equal(pp, 'f commonAncestor e');
+                        expect(e.commonAncestor(f)).to.equal(pp, 'e commonAncestor f');
+                        expect(f.commonAncestor(e, TagNode)).to.equal(
+                            pp,
+                            'f commonAncestor e for TagNode',
+                        );
+                        expect(e.commonAncestor(f, TagNode)).to.equal(
+                            pp,
+                            'e commonAncestor f for TagNode',
+                        );
+                        expect(pp.commonAncestor(e, TagNode)).to.equal(
+                            pp,
+                            'pp commonAncestor e for TagNode',
+                        );
+                        expect(e.commonAncestor(pp, TagNode)).to.equal(
+                            pp,
+                            'e commonAncestor pp for TagNode',
+                        );
+                        expect(p.commonAncestor(e, TagNode)).to.equal(
+                            p,
+                            'p commonAncestor e for TagNode',
+                        );
+                        expect(e.commonAncestor(p, TagNode)).to.equal(
+                            p,
+                            'e commonAncestor p for TagNode',
+                        );
+                    });
+                    it('should return the common ancestor (2)', async () => {
                         /*
                          * <root>                     root
                          *     a                      a
@@ -726,7 +758,7 @@ describe('core', () => {
                         expect(b.adjacents()).to.deep.equal([b], 'siblings without the markers');
                         expect(root.adjacents()).to.deep.equal([root]);
                     });
-                    it('should return the adjacent nodes', async () => {
+                    it('should return the adjacent nodes (2)', async () => {
                         const container = new ContainerNode();
                         const a = new CharNode({ char: 'a' });
                         container.append(a);
