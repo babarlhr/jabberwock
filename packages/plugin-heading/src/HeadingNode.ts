@@ -2,6 +2,7 @@ import { TagNode } from '../../core/src/VNodes/TagNode';
 
 export class HeadingNode extends TagNode {
     mayContainContainers = false;
+    allowEmpty = false;
     level: number;
     constructor(params: { level: number }) {
         super({ htmlTag: 'H' + params.level });

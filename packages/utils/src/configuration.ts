@@ -139,6 +139,7 @@ export async function parseEditable(
     autofocus = false,
 ): Promise<VNode[]> {
     const nodes = await parseElement(editor, element);
+    (nodes[0] as ContainerNode).allowEmpty = false;
     nodes[0].editable = false;
     nodes[0].breakable = false;
     nodes[0].modifiers.get(Attributes).set('contentEditable', 'true');
@@ -158,6 +159,7 @@ export async function createEditable(editor: JWEditor, autofocus = false): Promi
     // We need to guarantee it's a block so it can contain
     // other blocks.
     root.modifiers.get(Attributes).set('style', 'display: block;');
+    root.allowEmpty = false;
     root.editable = false;
     root.breakable = false;
     root.modifiers.get(Attributes).set('contentEditable', 'true');
