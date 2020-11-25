@@ -23,6 +23,7 @@ import { ChangesLocations } from '../../core/src/Memory/Memory';
 import { AbstractNode } from '../../core/src/VNodes/AbstractNode';
 import { Renderer } from '../../plugin-renderer/src/Renderer';
 import { RuleProperty } from '../../core/src/Mode';
+import { walker } from '../../core/src/Walker';
 
 export type DomPoint = [Node, number];
 export type DomLayoutLocation = [Node, DomZonePosition];
@@ -45,6 +46,7 @@ export class DomLayoutEngine extends LayoutEngine {
         id: 'editor',
         async render(): Promise<VNode[]> {
             const editor = new TagNode({ htmlTag: 'JW-EDITOR' });
+            editor.editable = false;
             editor.append(new ZoneNode({ managedZones: ['main'] }));
             editor.append(new ZoneNode({ managedZones: ['default'] }));
             return [editor];
@@ -201,7 +203,9 @@ export class DomLayoutEngine extends LayoutEngine {
             update: [],
         },
     ): Promise<void> {
-        const updatedNodes = [...this._getInvalidNodes(params)];
+        const updatedNodes = [...this._getInvalidNodes(params)].filter(
+            node => node !== this.editor.selection.anchor && node !== this.editor.selection.focus,
+        );
 
         const layout = this.editor.plugins.get(Renderer);
         const engine = layout.engines['object/html'] as DomObjectRenderingEngine;
@@ -223,6 +227,7 @@ export class DomLayoutEngine extends LayoutEngine {
         // Append in dom if needed.
         for (const componentId in this.locations) {
             const nodes = this.components[componentId];
+
             const needInsert = nodes.find(node => {
                 const domNodes = this._domReconciliationEngine.toDom(node);
                 return !domNodes.length || domNodes.some(node => !node.parentNode);
@@ -262,23 +267,23 @@ export class DomLayoutEngine extends LayoutEngine {
         for (const object of diff.move) {
             if (
                 object instanceof AbstractNode &&
-                object.parent &&
+                object.parentVNode &&
                 !add.has(object as VNode) &&
                 !cache?.renderings.get(object as VNode)
             ) {
                 add.add(object as VNode);
-                for (const child of object.descendants()) {
+                for (const child of walker.descendants(object)) {
                     add.add(child);
                 }
             }
         }
 
         for (const node of add) {
-            if (!node.parent) {
+            if (!node.parentVNode) {
                 add.delete(node);
                 remove.add(node);
                 if (node.childVNodes) {
-                    for (const child of node.descendants()) {
+                    for (const child of walker.descendants(node)) {
                         add.delete(node);
                         remove.add(child);
                     }
@@ -310,7 +315,7 @@ export class DomLayoutEngine extends LayoutEngine {
                 update.delete(node);
                 remove.add(node);
                 if (node.childVNodes) {
-                    for (const child of node.descendants()) {
+                    for (const child of walker.descendants(node)) {
                         remove.add(child);
                     }
                 }
@@ -325,9 +330,9 @@ export class DomLayoutEngine extends LayoutEngine {
             const paramsUpdate: [object, string[] | number[] | void][] = [];
             diff.update.filter(up => {
                 const object = up[0];
-                if (up[1] && object instanceof AbstractNode && !object.parent) {
+                if (up[1] && object instanceof AbstractNode && !object.parentVNode) {
                     remove.add(object as VNode);
-                    for (const child of object.descendants()) {
+                    for (const child of walker.descendants(object)) {
                         remove.add(child);
                     }
                 } else if (!remove.has(object as VNode)) {
@@ -360,11 +365,11 @@ export class DomLayoutEngine extends LayoutEngine {
                         if (parent instanceof AbstractNode) {
                             if (remove.has(parent as VNode)) {
                                 // The node was already removed in an other memory slice.
-                            } else if (!parent.parent) {
+                            } else if (!parent.parentVNode) {
                                 // An old removed node can change. For eg: move a children
                                 // into the active VDocument.
                                 remove.add(parent as VNode);
-                                for (const child of parent.descendants()) {
+                                for (const child of walker.descendants(parent)) {
                                     remove.add(child);
                                     update.delete(child);
                                 }
@@ -385,7 +390,16 @@ export class DomLayoutEngine extends LayoutEngine {
                                             mayBeAlreadyRemoved.push(child);
                                         }
                                         if (changes[i - 1] !== index - 1) {
-                                            const previous = child.previousSibling();
+                                            let previous = child.previousSibling();
+                                            if (
+                                                previous &&
+                                                !add.has(previous) &&
+                                                !update.has(previous)
+                                            ) {
+                                                updatedSiblings.add(previous);
+                                                mayBeAlreadyRemoved.push(previous);
+                                            }
+                                            previous = walker.previousSibling(child);
                                             if (
                                                 previous &&
                                                 !add.has(previous) &&
@@ -396,16 +410,19 @@ export class DomLayoutEngine extends LayoutEngine {
                                             }
                                         }
                                         if (changes[i + 1] !== index + 1) {
-                                            const next = child.nextSibling();
+                                            let next = child.nextSibling();
                                             if (next && !add.has(next) && !update.has(next)) {
-                                                if (next) {
-                                                    updatedSiblings.add(next);
-                                                    mayBeAlreadyRemoved.push(next);
-                                                }
+                                                updatedSiblings.add(next);
+                                                mayBeAlreadyRemoved.push(next);
+                                            }
+                                            next = walker.nextSibling(child);
+                                            if (next && !add.has(next) && !update.has(next)) {
+                                                updatedSiblings.add(next);
+                                                mayBeAlreadyRemoved.push(next);
                                             }
                                         }
                                     } else {
-                                        const children = parent.children();
+                                        const children = walker.children(parent);
                                         if (children.length) {
                                             const last = children[children.length - 1];
                                             if (last && !add.has(last) && !update.has(last)) {
@@ -439,9 +456,9 @@ export class DomLayoutEngine extends LayoutEngine {
 
             // If any change invalidate the siblings.
             for (const node of needSiblings) {
-                const next = node.nextSibling();
+                const next = walker.nextSibling(node);
                 if (next) updatedSiblings.add(next);
-                const previous = node.previousSibling();
+                const previous = walker.previousSibling(node);
                 if (previous) updatedSiblings.add(previous);
             }
 
@@ -589,7 +606,7 @@ export class DomLayoutEngine extends LayoutEngine {
                     nodesInRoot.add(node);
                     break;
                 }
-                ancestor = ancestor.parent;
+                ancestor = ancestor.parentVNode;
                 if (!ancestor || !ancestor.id || notRoot.has(ancestor)) {
                     // A VNode without an id does not exist yet/anymore in the
                     // current memory slice.
@@ -630,9 +647,12 @@ export class DomLayoutEngine extends LayoutEngine {
         if (selection.range.isCollapsed()) {
             // Prevent rendering a collapsed selection in a non-editable context.
             const target =
-                range.start.previousSibling() || range.end.nextSibling() || range.startContainer;
+                walker.previousSibling(range.start) ||
+                walker.nextSibling(range.end) ||
+                range.startContainer;
             const isEditable = this.editor.mode.is(target, RuleProperty.EDITABLE);
-            const isInMain = target.ancestor(
+            const isInMain = walker.ancestor(
+                target,
                 node => node instanceof ZoneNode && node.managedZones.includes('main'),
             );
             if ((!isEditable && !isContentEditable(target)) || !isInMain) {
@@ -640,14 +660,14 @@ export class DomLayoutEngine extends LayoutEngine {
                 return;
             }
         }
-        const domNodes = this._domReconciliationEngine.toDom(selection.anchor.parent);
+        const domNodes = this._domReconciliationEngine.toDom(selection.anchor.parentVNode);
         if (!domNodes.length) {
             document.getSelection().removeAllRanges();
             return;
         }
         if (
-            selection.anchor.ancestors().pop() !== this.root ||
-            selection.focus.ancestors().pop() !== this.root
+            walker.ancestors(selection.anchor).pop() !== this.root ||
+            walker.ancestors(selection.focus).pop() !== this.root
         ) {
             console.warn('Cannot render a selection that is outside the Layout.');
             document.getSelection().removeAllRanges();
@@ -712,6 +732,7 @@ export class DomLayoutEngine extends LayoutEngine {
         for (const node of this.components[id]) {
             domNodes.push(...this._domReconciliationEngine.toDom(node));
         }
+
         if (!domNodes.length && this.locations[id][1] === 'replace') {
             throw new Error('Impossible to replace a element with an empty template.');
         }

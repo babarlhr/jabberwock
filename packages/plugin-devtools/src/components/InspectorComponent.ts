@@ -8,6 +8,7 @@ import { DomLayoutEngine } from '../../../plugin-dom-layout/src/DomLayoutEngine'
 import { caretPositionFromPoint } from '../../../utils/src/polyfill';
 import { CharNode } from '../../../plugin-char/src/CharNode';
 import { isInstanceOf } from '../../../utils/src/utils';
+import { walker } from '../../../core/src/Walker';
 
 const hoverStyle = 'box-shadow: inset 0 0 0 100vh rgba(95, 146, 204, 0.5); cursor: pointer;';
 
@@ -61,16 +62,16 @@ export class InspectorComponent extends OwlComponent<InspectorComponentProps> {
         let newSelection: VNode;
         switch (event.code) {
             case 'ArrowDown':
-                newSelection = selected.nextSibling() || selected.firstChild();
+                newSelection = walker.nextSibling(selected) || walker.firstChild(selected);
                 break;
             case 'ArrowUp':
-                newSelection = selected.previousSibling() || selected.parent;
+                newSelection = walker.previousSibling(selected) || selected.parentVNode;
                 break;
             case 'ArrowLeft':
-                newSelection = selected.previousSibling();
+                newSelection = walker.previousSibling(selected);
                 break;
             case 'ArrowRight':
-                newSelection = selected.nextSibling();
+                newSelection = walker.nextSibling(selected);
                 break;
             default:
                 return;
@@ -114,10 +115,10 @@ export class InspectorComponent extends OwlComponent<InspectorComponentProps> {
      */
     getPath(vNode: VNode): VNode[] {
         const path: VNode[] = [vNode];
-        let parent: VNode = vNode.parent;
+        let parent: VNode = vNode.parentVNode;
         while (parent) {
             path.unshift(parent);
-            parent = parent.parent;
+            parent = parent.parentVNode;
         }
         return path;
     }

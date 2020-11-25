@@ -117,7 +117,8 @@ export abstract class AbstractNode extends EventMixin {
      * Return the text content of this node.
      */
     get textContent(): string {
-        return this.children()
+        return tangibleWalker
+            .children(this as VNode)
             .map(child => child.textContent)
             .join('');
     }
@@ -176,7 +177,7 @@ export abstract class AbstractNode extends EventMixin {
      * Return the length of this VNode.
      */
     get length(): number {
-        return this.children().length;
+        return tangibleWalker.children(this as VNode).length;
     }
     /**
      * See {@link Walker.testPredicate}.
