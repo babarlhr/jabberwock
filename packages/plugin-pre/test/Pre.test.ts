@@ -309,7 +309,7 @@ describePlugin(Pre, testEditor => {
                     contentBefore: '<pre>     a\nb[]c\n     d     </pre>',
                     stepFunction: applyHeadingStyle(0),
                     contentAfter:
-                        '<p>&nbsp;&nbsp; &nbsp; a<br>b[]c<br>&nbsp;&nbsp; &nbsp; d &nbsp; &nbsp;&nbsp;</p>',
+                        '<p> &nbsp; &nbsp; a<br>b[]c<br>&nbsp;&nbsp; &nbsp; d &nbsp; &nbsp; </p>',
                 });
             });
             it('should turn a pre with space and newlines into a paragraph (character selected)', async () => {
@@ -317,7 +317,7 @@ describePlugin(Pre, testEditor => {
                     contentBefore: '<pre>     a\n[b]\n     c     </pre>',
                     stepFunction: applyHeadingStyle(0),
                     contentAfter:
-                        '<p>&nbsp;&nbsp; &nbsp; a<br>[b]<br>&nbsp;&nbsp; &nbsp; c &nbsp; &nbsp;&nbsp;</p>',
+                        '<p> &nbsp; &nbsp; a<br>[b]<br>&nbsp;&nbsp; &nbsp; c &nbsp; &nbsp; </p>',
                 });
             });
             it('should turn a heading 1, a pre with space and newlines, and a heading 2 into three paragraphs', async () => {
@@ -325,7 +325,7 @@ describePlugin(Pre, testEditor => {
                     contentBefore: '<h1>a[b</h1><pre>     c\n     d     </pre><h2>e]f</h2>',
                     stepFunction: applyHeadingStyle(0),
                     contentAfter:
-                        '<p>a[b</p><p>&nbsp;&nbsp; &nbsp; c<br>&nbsp;&nbsp; &nbsp; d &nbsp; &nbsp;&nbsp;</p><p>e]f</p>',
+                        '<p>a[b</p><p> &nbsp; &nbsp; c<br>&nbsp;&nbsp; &nbsp; d &nbsp; &nbsp; </p><p>e]f</p>',
                 });
             });
         });
